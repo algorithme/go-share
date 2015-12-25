@@ -12,7 +12,9 @@ import (
 
 type Hash string
 
-var encoder hash.Hash = sha256.New()
+var (
+	encoder hash.Hash = sha256.New()
+)
 
 func File(f *os.File, blockSize int64) (hashes []string, err error) {
 	stat, err := f.Stat()
@@ -24,8 +26,8 @@ func File(f *os.File, blockSize int64) (hashes []string, err error) {
 	// calculate number of parts
 	size := stat.Size()
 	parts := (size / blockSize) + 1
-	hashes = make([]string, size)
-	reader := bufio.NewReaderSize(f, int(size))
+	hashes = make([]string, parts)
+	reader := bufio.NewReaderSize(f, int(blockSize))
 
 	log.Printf("number of parts %d with a size of %d", parts, size)
 
@@ -54,21 +56,31 @@ func File(f *os.File, blockSize int64) (hashes []string, err error) {
 }
 
 func FilePart(b *bufio.Reader, blockSize int64, offset int64) (hash string, err error) {
-	buffer := make([]byte, blockSize)
+	iterations := blockSize / 128
+	bufferRest := blockSize % 128
 
-	_, err = b.Read(buffer)
-
-	if err != nil && err != io.EOF {
-		log.Fatal(err)
-		return
+	if bufferRest > 0 {
+		iterations++
 	}
 
-	_, err = encoder.Write(buffer)
+	for i := 0; i < int(iterations); i++ {
+		buffer := make([]byte, 128)
 
-	if err != nil {
-		log.Fatal(err)
-		return
+		_, err = b.Read(buffer)
+
+		if err != nil && err != io.EOF {
+			log.Fatal(err)
+			return
+		}
+
+		_, err = encoder.Write(buffer)
+
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	}
+
 	hash = hex.EncodeToString(encoder.Sum(nil))
 	log.Printf("%s - %s", hash, err)
 

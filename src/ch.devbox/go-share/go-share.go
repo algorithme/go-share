@@ -1,13 +1,39 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"os"
+	"runtime/pprof"
 
 	"ch.devbox/hash"
 )
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+
+var memprofile = flag.String("memprofile", "", "write memory profile to file")
+
 func main() {
+	flag.Parse()
+	if *cpuprofile != "" {
+		cf, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(cf)
+		defer pprof.StopCPUProfile()
+	}
+
+	if *memprofile != "" {
+		mf, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(mf)
+		defer mf.Close()
+	}
+
 	f, err := os.Open("/Users/omorel/Dropbox/video/clojure/Rich Hickey - Deconstructing the Database-Cym4TZwTCNU.mp4")
 	defer f.Close()
 
