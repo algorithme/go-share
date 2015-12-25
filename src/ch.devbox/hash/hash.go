@@ -27,7 +27,7 @@ func File(f *os.File, blockSize int64) (hashes []string, err error) {
 	size := stat.Size()
 	parts := (size / blockSize) + 1
 	hashes = make([]string, parts)
-	reader := bufio.NewReaderSize(f, int(blockSize))
+	reader := bufio.NewReaderSize(f, 128)
 
 	log.Printf("number of parts %d with a size of %d", parts, size)
 
