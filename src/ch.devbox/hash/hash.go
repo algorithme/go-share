@@ -8,9 +8,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 )
 
-type Hash string
+type FileHash struct {
+	FileName string
+	Path     string
+	Hashes   []string
+}
 
 var (
 	encoder hash.Hash = sha256.New()
@@ -27,7 +32,7 @@ func File(f *os.File, blockSize int64) (hashes []string, err error) {
 	size := stat.Size()
 	parts := (size / blockSize) + 1
 	hashes = make([]string, parts)
-	reader := bufio.NewReaderSize(f, 128)
+	reader := bufio.NewReaderSize(f, 32*1000*1000)
 
 	log.Printf("number of parts %d with a size of %d", parts, size)
 
@@ -56,15 +61,15 @@ func File(f *os.File, blockSize int64) (hashes []string, err error) {
 }
 
 func FilePart(b *bufio.Reader, blockSize int64, offset int64) (hash string, err error) {
-	iterations := blockSize / 128
-	bufferRest := blockSize % 128
+	iterations := blockSize / 32
+	bufferRest := blockSize % 32
 
 	if bufferRest > 0 {
 		iterations++
 	}
 
 	for i := 0; i < int(iterations); i++ {
-		buffer := make([]byte, 128)
+		buffer := make([]byte, 32)
 
 		_, err = b.Read(buffer)
 
@@ -84,5 +89,34 @@ func FilePart(b *bufio.Reader, blockSize int64, offset int64) (hash string, err 
 	hash = hex.EncodeToString(encoder.Sum(nil))
 	log.Printf("%s - %s", hash, err)
 
+	return
+}
+
+func ListFiles(path string) (files []FileHash, err error) {
+	handleFile := func(path string, info os.FileInfo, err error) error {
+		log.Printf("Handle file %s with name: %s", path, info.Name())
+		if info.IsDir() {
+			return err
+		}
+
+		f, err := os.Open(path)
+		defer f.Close()
+
+		hs, err := File(f, 64*1000*1000)
+		if err != nil {
+			log.Fatal(err)
+			return err
+		}
+
+		files = append(files, FileHash{
+			FileName: info.Name(),
+			Path:     path,
+			Hashes:   hs,
+		})
+
+		return err
+	}
+
+	filepath.Walk(path, handleFile)
 	return
 }

@@ -25,15 +25,6 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
-	if *memprofile != "" {
-		mf, err := os.Create(*memprofile)
-		if err != nil {
-			log.Fatal(err)
-		}
-		pprof.WriteHeapProfile(mf)
-		defer mf.Close()
-	}
-
 	f, err := os.Open("/Users/omorel/Dropbox/video/clojure/Rich Hickey - Deconstructing the Database-Cym4TZwTCNU.mp4")
 	defer f.Close()
 
@@ -49,4 +40,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	hash.ListFiles("/Users/omorel/Dropbox/video/")
+
+	if *memprofile != "" {
+		mf, err := os.Create(*memprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.WriteHeapProfile(mf)
+		defer mf.Close()
+	}
 }
